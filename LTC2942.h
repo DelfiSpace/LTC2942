@@ -135,6 +135,8 @@ class LTC2942
 protected:
 	DWire &wire;
     unsigned char address;
+	unsigned char M;		//prescaler
+	unsigned short R_sense;	//Sense resistor
 	
 public:
 
@@ -144,14 +146,14 @@ public:
 	unsigned char ping();
 	
 	// Configure the device
-	void init(unsigned short Q, unsigned short R);
+	void init(unsigned short Q, unsigned short R, unsigned short I);
 	void reset_charge();
 	
 	// Retrieve and convert register value to measurements
 	unsigned short code_to_voltage();
 	short code_to_celcius_temperature();
-	unsigned long code_to_millicoulombs(unsigned short R, unsigned short M);
-	unsigned long code_to_microAh(unsigned short R, unsigned short M);
+	unsigned long code_to_millicoulombs();
+	unsigned long code_to_microAh();
 	
 	
 	// read and write from the register

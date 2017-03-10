@@ -44,18 +44,24 @@ unsigned char LTC2942::ping()
  *   Parameters:
  *   unsigned short Q			   battery capacity in mAh
  *   unsigned short	R			   Sense resistor value in mOhm
+ *   unsigned short I			   Max current of the system in mA
  *
  */
-void LTC2942::init(unsigned short Q, unsigned short R)
+void LTC2942::init(unsigned short Q, unsigned short R, unsigned short I)
 {
-	double M;
+	double temp;
 	unsigned char i = 0;
 	
-	M = double(Q * R /(50 * 0.085 * 512)); //divide by 2^9 (512), reduce computational load
+	R_sense = R;
 	
-	while ( M > 1.0)
+	if (Q < I / 10)		//Page 11 of LTC2942 data sheet
 	{
-		M /= 2.0;
+	
+	temp = double(Q * R_sense /(50 * 0.085 * 512)); //divide by 2^9 (512), reduce computational load
+	
+	while ( temp > 1.0)
+	{
+		temp /= 2.0;
 		i++;
 	}
 	
@@ -68,37 +74,50 @@ void LTC2942::init(unsigned short Q, unsigned short R)
 	{
 		case 0: 
 		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_1 | DISABLE_ALCC_PIN));
+		M = 1;
 		break;
 		
 		case 1: 
 		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_2 | DISABLE_ALCC_PIN));
+		M = 2;
 		break;
 		
 		case 2: 
 		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_4 | DISABLE_ALCC_PIN));
+		M = 4;
 		break;
 		
 		case 3: 
 		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_8 | DISABLE_ALCC_PIN));
+		M = 8;
 		break;
 		
 		case 4: 
 		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_16 | DISABLE_ALCC_PIN));
+		M = 16;
 		break;
 		
 		case 5: 
 		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_32 | DISABLE_ALCC_PIN));
+		M = 32;
 		break;
 		
 		case 6: 
 		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_64 | DISABLE_ALCC_PIN));
+		M = 64;
 		break;
 		
 		case 7: 
 		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_128 | DISABLE_ALCC_PIN));
+		M = 128;
 		break;
 	}
-		
+	}
+	else 
+	{
+		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_128 | DISABLE_ALCC_PIN));	//default M = 128
+		M = 128;
+	}
 }
 
 /** Reset the accumulated charge count to zero
@@ -165,10 +184,6 @@ short LTC2942::code_to_celcius_temperature()
 }
 
 /** Calculate the LTC2942 charge in milliCoulombs
- *  
- *  Parameters: 
- *  unsigned short R			sense resistor value in mOhm		
- *  unsigned short M			prescalar value
  *
  *  Returns:
  *  unsigned long 				Coulomb charge in mC
@@ -177,19 +192,15 @@ short LTC2942::code_to_celcius_temperature()
  *  Return is in unsigned long to prevent usage of float datatype as well as prevent overflow
  *
  */
-unsigned long LTC2942::code_to_millicoulombs(unsigned short R, unsigned short M)
+unsigned long LTC2942::code_to_millicoulombs()
 {
   unsigned long coulomb_charge;
   
-  coulomb_charge = code_to_microAh(R, M) * 3.6;	//1microAh = 3.6 mC
+  coulomb_charge = code_to_microAh() * 3.6;	//1microAh = 3.6 mC
   return(coulomb_charge);
 }
 
 /** Calculate the LTC2942 charge in microAh
- *
- *  Parameters:
- *  unsigned short R			sense resistor value in mOhm		
- *  unsigned short M			prescalar value
  *
  *  Returns:	
  *  unsigned long 				Coulomb charge in microAh
@@ -199,7 +210,7 @@ unsigned long LTC2942::code_to_millicoulombs(unsigned short R, unsigned short M)
  *  Loss of precision is < than LSB (0.085mAh)
  *     
  */
-unsigned long LTC2942::code_to_microAh(unsigned short R, unsigned short M)
+unsigned long LTC2942::code_to_microAh()
 {
   unsigned long mAh_charge;
   unsigned short adc_code = -1;
@@ -207,7 +218,7 @@ unsigned long LTC2942::code_to_microAh(unsigned short R, unsigned short M)
   ((unsigned char*)&adc_code)[1] = readRegister(ACCUM_CHARGE_MSB_REG);
   ((unsigned char*)&adc_code)[0] = readRegister(ACCUM_CHARGE_LSB_REG);
   
-  mAh_charge = (unsigned long)(adc_code * CHARGE_lsb * M * 5)/(R * 128) * 10;		//charge in microAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
+  mAh_charge = (unsigned long)(adc_code * CHARGE_lsb * M * 5)/(R_sense * 128) * 10;		//charge in microAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
   return(mAh_charge);
 }
 
