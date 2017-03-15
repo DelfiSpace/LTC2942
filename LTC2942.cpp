@@ -162,13 +162,13 @@ unsigned short LTC2942::code_to_voltage()
 /** Calculate the LTC2942 temperature
  *
  *  Returns:
- *  short 					Temperature in 10^2 Celcius 
+ *  short 					Temperature in E-2 Celcius 
  *
  *  Note:
  *  1. Datasheet conversion formula divide by 65535, in this library we divide by 65536 (>> 16) to reduce computational load 
  *     this is acceptable as the difference is much lower than the resolution of LTC2942 temperature measurement (3 Celcius)
  *  2. Return is in short to prevent usage of float datatype, floating point offset is acceptable as it is lower than the resolution of LTC2942 voltage measurement (3 Celcius).
- *     Unit in 10^2 Celcius, not in 10^3 as it might cause overflow at high temperature
+ *     Unit in E-2 Celcius, not in 10^3 as it might cause overflow at high temperature
  *
  */
 short LTC2942::code_to_celcius_temperature()
