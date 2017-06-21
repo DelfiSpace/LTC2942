@@ -150,15 +150,15 @@ public:
 	void reset_charge();
 	
 	// Retrieve and convert register value to measurements
-	unsigned short code_to_voltage();
-	short code_to_celcius_temperature();
-	unsigned long code_to_millicoulombs();
-	unsigned long code_to_microAh();
+	unsigned char code_to_voltage(unsigned short &voltage);
+	unsigned char code_to_celcius_temperature(short &temperature);
+	unsigned char code_to_millicoulombs(unsigned long &coulomb_charge);
+	unsigned char code_to_microAh(unsigned long &mAh_charge);
 	
 	
 	// read and write from the register
-	unsigned char readRegister(unsigned char reg);
-	void writeRegister(unsigned char reg, unsigned char val);
+	unsigned char readRegister(unsigned char reg, unsigned char &output);
+	unsigned char writeRegister(unsigned char reg, unsigned char val);
 	
 private:
 

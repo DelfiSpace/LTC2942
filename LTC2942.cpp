@@ -33,8 +33,16 @@ LTC2942::LTC2942(DWire &i2c): wire(i2c)
  *
  */
 unsigned char LTC2942::ping()
-{
-	return (readRegister(STATUS_REG) & 0xC0) == DEVICE_ID;	//Only last 2 bits give device identification, bitmask first 6 bits
+{	
+	unsigned char ret;
+	if (readRegister(STATUS_REG, ret) == 0)
+	{
+		return  (ret & 0xC0) == DEVICE_ID;	//Only last 2 bits give device identification, bitmask first 6 bits
+	}
+	else
+	{
+		return 0;
+	}
 }
 
 /**  Initialise the value of control register
@@ -126,7 +134,7 @@ void LTC2942::reset_charge()
 {
 	unsigned char reg_save;	//value of control register
 	
-	reg_save = readRegister(CONTROL_REG);
+	readRegister(CONTROL_REG, reg_save);
 	writeRegister(CONTROL_REG, (reg_save | SHUTDOWN_MODE));	//shutdown to write into accumulated charge register
 	writeRegister(ACCUM_CHARGE_MSB_REG, 0x00);
 	writeRegister(ACCUM_CHARGE_LSB_REG, 0x00);
@@ -137,8 +145,12 @@ void LTC2942::reset_charge()
 
 /** Calculate the LTC2942 SENSE+ voltage
  *
- *  Returns:
- *  unsigned short 				voltage in mV
+ *  Parameters:
+ *  unsigned short &				voltage in mV
+ *
+ *	Returns
+ * 	unsigned char         0 success
+ *                        1 fail
  *
  *  Note:
  *  1. Datasheet conversion formula divide by 65535, in this library we divide by 65536 (>> 16) to reduce computational load 
@@ -147,22 +159,26 @@ void LTC2942::reset_charge()
  *     floating point offset is acceptable as it is lower than the resolution of LTC2942 voltage measurement (78mV)
  *
  */
-unsigned short LTC2942::code_to_voltage()
+unsigned char LTC2942::code_to_voltage(unsigned short &voltage)
 {
-	unsigned short voltage;
 	unsigned short adc_code = -1;
+	unsigned char ret1, ret2;
 	  
-	((unsigned char*)&adc_code)[1] = readRegister(VOLTAGE_MSB_REG);
-	((unsigned char*)&adc_code)[0] = readRegister(VOLTAGE_LSB_REG);
+	ret1 = readRegister(VOLTAGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
+	ret2 = readRegister(VOLTAGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
 
 	voltage = (adc_code *FULLSCALE_VOLTAGE) >> 16;			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
-	return(voltage);
+	return(ret1 || ret2);
 }
 
 /** Calculate the LTC2942 temperature
  *
- *  Returns:
- *  short 					Temperature in E-2 Celcius 
+ *  Parameters:
+ *  short &					Temperature in E-2 Celcius 
+ *
+ *	Returns
+ * 	unsigned char         0 success
+ *                        1 fail
  *
  *  Note:
  *  1. Datasheet conversion formula divide by 65535, in this library we divide by 65536 (>> 16) to reduce computational load 
@@ -171,55 +187,63 @@ unsigned short LTC2942::code_to_voltage()
  *     Unit in E-2 Celcius, not in 10^3 as it might cause overflow at high temperature
  *
  */
-short LTC2942::code_to_celcius_temperature()
+unsigned char LTC2942::code_to_celcius_temperature(short &temperature)
 {
-  short temperature;
   unsigned short adc_code = -1;
+  unsigned char ret1, ret2;
   
-  ((unsigned char*)&adc_code)[1] = readRegister(TEMPERATURE_MSB_REG);
-  ((unsigned char*)&adc_code)[0] = readRegister(TEMPERATURE_LSB_REG);
+  ret1 = readRegister(TEMPERATURE_MSB_REG, ((unsigned char*)&adc_code)[1]);
+  ret2 = readRegister(TEMPERATURE_LSB_REG, ((unsigned char*)&adc_code)[0]);
   
   temperature = short((adc_code *FULLSCALE_TEMPERATURE * 100) >> 16 ) - 27315; //Note: multiply by 100 to convert to 10^2 Celcius, to prevent using float datatype
-  return(temperature);
+  return(ret1 || ret2);
 }
 
 /** Calculate the LTC2942 charge in milliCoulombs
  *
- *  Returns:
- *  unsigned long 				Coulomb charge in mC
+ *  Parameters:
+ *  unsigned long &		  Coulomb charge in mC
+ *
+ *	Returns
+ * 	unsigned char         0 success
+ *                        1 fail
  *
  *  Note:
  *  Return is in unsigned long to prevent usage of float datatype as well as prevent overflow
  *
  */
-unsigned long LTC2942::code_to_millicoulombs()
+unsigned char LTC2942::code_to_millicoulombs(unsigned long &coulomb_charge)
 {
-  unsigned long coulomb_charge;
-  
-  coulomb_charge = code_to_microAh() * 3.6;	//1microAh = 3.6 mC
-  return(coulomb_charge);
+  unsigned char ret;
+  ret = code_to_microAh(coulomb_charge);	
+  coulomb_charge = coulomb_charge * 3.6;	//1microAh = 3.6 mC
+  return ret;
 }
 
 /** Calculate the LTC2942 charge in microAh
  *
- *  Returns:	
- *  unsigned long 				Coulomb charge in microAh
+ *  Parameters:	
+ *  unsigned long &		  Coulomb charge in microAh
+ *
+ *	Returns
+ * 	unsigned char         0 success
+ *                        1 fail
  *
  *  Note:
  *  Return is in unsigned long to prevent usage of float datatype 
  *  Loss of precision is < than LSB (0.085mAh)
  *     
  */
-unsigned long LTC2942::code_to_microAh()
+unsigned char LTC2942::code_to_microAh(unsigned long &mAh_charge)
 {
-  unsigned long mAh_charge;
   unsigned short adc_code = -1;
+  unsigned char ret1, ret2;
   
-  ((unsigned char*)&adc_code)[1] = readRegister(ACCUM_CHARGE_MSB_REG);
-  ((unsigned char*)&adc_code)[0] = readRegister(ACCUM_CHARGE_LSB_REG);
+  ret1 = readRegister(ACCUM_CHARGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
+  ret2 = readRegister(ACCUM_CHARGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
   
   mAh_charge = (unsigned long)(adc_code * CHARGE_lsb * M * 5)/(R_sense * 128) * 10;		//charge in microAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
-  return(mAh_charge);
+  return(ret1 || ret2);
 }
 
 
@@ -230,24 +254,29 @@ unsigned long LTC2942::code_to_microAh()
  *
  *   Parameters:
  *   unsigned char reg     register number
+ *   unsigned char &       register value
  *
  *   Returns:
- *   unsigned char         register value
+ *   unsigned char         0 success
+ *                         1 fail
  *
  */
-unsigned char LTC2942::readRegister(unsigned char reg)
+unsigned char LTC2942::readRegister(unsigned char reg, unsigned char &output)
 {
-    unsigned char ret = -1;
+    output = -1;
     wire.beginTransmission(address);
     wire.write(reg);
 
     unsigned char res = wire.requestFrom(address, 1);
     if (res == 1)
     {
-		ret = wire.read();
+		output = wire.read();
+		return 0;
     }
-
-    return ret;
+	else
+	{
+		return 1;
+	}
 }
 
 
@@ -257,11 +286,14 @@ unsigned char LTC2942::readRegister(unsigned char reg)
  *   unsigned char reg     register number
  *   unsigned char val     register value
  *
+ *   Returns:
+ *   unsigned char         0 success
+ *                         1 fail
  */
-void LTC2942::writeRegister(unsigned char reg, unsigned char val)
+unsigned char LTC2942::writeRegister(unsigned char reg, unsigned char val)
 {
     wire.beginTransmission(address);
     wire.write(reg);
     wire.write(val & 0xFF);      
-    wire.endTransmission();
+    return wire.endTransmission();
 }
