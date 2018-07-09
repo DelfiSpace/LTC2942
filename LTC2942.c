@@ -151,52 +151,10 @@ bool ltc_readDeviceID(dev_id id)
  *   unsigned short I			   Max current of the system in mA
  *
  */
-void ltc_init( dev_id id,
-               uint16_t *R_sense,
-               uint8_t *M,
-               uint16_t Q,
-               uint16_t R,
-               uint16_t I) {
+void ltc_init(dev_id id) {
 
-	uint8_t i = 0;
-  uint8_t pre = 0;
-
-	*R_sense = R;
-
-	if (Q < I / 10)	{	//Page 11 of LTC2942 data sheet
-
-	  double temp = double(Q * (*R_sense) /(50 * 0.085 * 512)); //divide by 2^9 (512), reduce computational load
-
-  	for(i = 0; i >= 7 ; i++) {
-      if(temp <= 1.0) {
-        break;
-      }
-  		temp /= 2.0;
-  	}
-
-    *M = 1 << i;
-
-    if(i == 1) {
-      pre = PRESCALAR_M_1;
-    } else if(i == 2) {
-      pre = PRESCALAR_M_2;
-    } else if(i == 3) {
-      pre = PRESCALAR_M_4;
-    } else if(i == 4) {
-      pre = PRESCALAR_M_8;
-    } else if(i == 5) {
-      pre = PRESCALAR_M_16;
-    } else if(i == 6) {
-      pre = PRESCALAR_M_32;
-    } else if(i == 7) {
-      pre = PRESCALAR_M_64;
-    }
-
-	} else {
-    pre = PRESCALAR_M_128;
-    *M = 128;
-	}
-  ltc_writeRegister(id, CONTROL_REG, (AUTOMATIC_MODE | pre | DISABLE_ALCC_PIN));	//default M = 128
+  ltc_writeRegister(id, CONTROL_REG, 0xC8);	// M = 4
+  usleep(1);
 }
 
 /** Reset the accumulated charge count to zero
@@ -235,9 +193,11 @@ bool ltc_code_to_voltage(dev_id id, uint16_t *voltage)
 	uint8_t adc_code[2];
 
 	ltc_readRegister(id, VOLTAGE_MSB_REG, &adc_code[1]);
+  usleep(1);
   ltc_readRegister(id, VOLTAGE_LSB_REG, &adc_code[0]);
+  usleep(1);
 
-	*voltage = (((adc_code[1] << 8) | adc_code[0] ) *FULLSCALE_VOLTAGE) >> 16;			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
+	*voltage = ((adc_code[1] << 8) | adc_code[0]);			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
 	return 0;
 }
 
@@ -257,42 +217,22 @@ bool ltc_code_to_voltage(dev_id id, uint16_t *voltage)
  *     Unit in E-2 Celcius, not in 10^3 as it might cause overflow at high temperature
  *
  */
-bool ltc_code_to_celcius_temperature(dev_id id, int16_t *temperature)
+bool ltc_temp(dev_id id, int16_t *temperature)
 {
 
   uint8_t adc_code[2];
-  uint16_t adc = 0;
+  uint32_t bat_temp=0;
 
-  ltc_readRegister(id, TEMPERATURE_MSB_REG, &adc_code[1]);
+  ltc_readRegister(id, TEMPERATURE_MSB_REG, &adc_code[1]);\
+  usleep(1);
   ltc_readRegister(id, TEMPERATURE_LSB_REG, &adc_code[0]);
+  usleep(1);
 
-  adc = ((adc_code[1] << 8) | adc_code[0] );
-  *temperature = int16_t((adc * FULLSCALE_TEMPERATURE * 100) >> 16 ) - 27315; //Note: multiply by 100 to convert to 10^2 Celcius, to prevent using float datatype
+  *temperature = (uint16_t)((adc_code[1] << 8) | adc_code[0]);
+
   return 0;
 }
 
-/** Calculate the LTC2942 charge in milliCoulombs
- *
- *  Parameters:
- *  unsigned long &		  Coulomb charge in mC
- *
- *	Returns
- * 	unsigned char         0 success
- *                        1 fail
- *
- *  Note:
- *  Return is in unsigned long to prevent usage of float datatype as well as prevent overflow
- *
- */
-bool ltc_code_to_millicoulombs(dev_id id,
-															 uint16_t R_sense,
-															 uint8_t M,
-															 uint32_t *coulomb_charge) {
-
-  ltc_code_to_microAh(id, R_sense, M, (uint32_t &)coulomb_charge);
-  *coulomb_charge = *coulomb_charge * 3.6;	//1microAh = 3.6 mC
-  return 0;
-}
 
 /** Calculate the LTC2942 charge in microAh
  *
@@ -308,18 +248,16 @@ bool ltc_code_to_millicoulombs(dev_id id,
  *  Loss of precision is < than LSB (0.085mAh)
  *
  */
-bool ltc_code_to_microAh(dev_id id,
-	                       uint16_t R_sense,
-												 uint8_t M,
-												 uint32_t mAh_charge) {
+bool ltc_capacity(dev_id id, uint16_t *cap) {
   uint8_t adc_code[2];
   uint16_t adc = 0;
 
   ltc_readRegister(id, ACCUM_CHARGE_MSB_REG, &adc_code[1]);
+  usleep(1);
   ltc_readRegister(id, ACCUM_CHARGE_LSB_REG, &adc_code[0]);
+  usleep(1);
 
-  adc = ((adc_code[1] << 8) | adc_code[0] );
+  *cap = ((adc_code[1] << 8) | adc_code[0] );
 
-  mAh_charge = (uint32_t)(adc * CHARGE_lsb * M * 5)/(R_sense * 128) * 10;		//charge in microAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
   return 0;
 }

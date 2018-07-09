@@ -65,11 +65,12 @@ http://www.linear.com/product/LTC2942#demoboards
 
 	// Retrieve and convert register value to measurements
   bool ltc_code_to_voltage(dev_id id, uint16_t *voltage);
-  bool ltc_code_to_celcius_temperature(dev_id id, int16_t *temperature);
+  bool ltc_temp(dev_id id, int16_t *temperature);
 	bool ltc_code_to_millicoulombs(dev_id id,
 																 uint16_t R_sense,
 																 uint8_t M,
 																 uint32_t *coulomb_charge);
+
 	bool ltc_code_to_microAh(dev_id id,
 		                       uint16_t R_sense,
 													 uint8_t M,
