@@ -76,4 +76,6 @@ http://www.linear.com/product/LTC2942#demoboards
 													 uint8_t M,
 													 uint32_t mAh_charge);
 
+													 bool ltc_capacity(dev_id id, uint16_t *cap);
+
 #endif  // LTC2942_H

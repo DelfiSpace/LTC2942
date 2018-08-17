@@ -13,7 +13,8 @@
  */
 
 #include "LTC2942.h"
-#include "hal_uart.h"
+#include "hal_functions.h"
+#include "hal_subsystem.h"
 
 /*! @name LTC2942 I2C Address
 @{ */
@@ -102,9 +103,9 @@
 bool ltc_readRegister(dev_id id, uint8_t reg, uint8_t *res)
 {
 
-  HAL_I2C_readWrite(id, &reg, 1, res, 1);
+  bool res1 = HAL_I2C_readWrite(id, &reg, 1, res, 1);
 
-  return 0;
+  return res1;
 }
 
 
@@ -123,7 +124,9 @@ bool ltc_writeRegister(dev_id id, uint8_t reg, uint8_t res)
 
     uint8_t tx_buf[2] = { reg, res };
 
-    HAL_I2C_readWrite(id, tx_buf, 2, NULL, 0);
+    bool res1 = HAL_I2C_readWrite(id, tx_buf, 2, NULL, 0);
+
+    return res1;
 }
 
 /**  Verify if LTC2942 is present
@@ -192,13 +195,16 @@ bool ltc_code_to_voltage(dev_id id, uint16_t *voltage)
 {
 	uint8_t adc_code[2];
 
-	ltc_readRegister(id, VOLTAGE_MSB_REG, &adc_code[1]);
+  bool res1, res2;
+
+	res1 = ltc_readRegister(id, VOLTAGE_MSB_REG, &adc_code[1]);
   usleep(1);
-  ltc_readRegister(id, VOLTAGE_LSB_REG, &adc_code[0]);
+  res2 = ltc_readRegister(id, VOLTAGE_LSB_REG, &adc_code[0]);
   usleep(1);
 
 	*voltage = ((adc_code[1] << 8) | adc_code[0]);			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
-	return 0;
+  bool res3 = res1 && res2;
+  return res3;
 }
 
 /** Calculate the LTC2942 temperature
@@ -223,14 +229,16 @@ bool ltc_temp(dev_id id, int16_t *temperature)
   uint8_t adc_code[2];
   uint32_t bat_temp=0;
 
-  ltc_readRegister(id, TEMPERATURE_MSB_REG, &adc_code[1]);\
+  bool res1, res2;
+
+  res1 = ltc_readRegister(id, TEMPERATURE_MSB_REG, &adc_code[1]);\
   usleep(1);
-  ltc_readRegister(id, TEMPERATURE_LSB_REG, &adc_code[0]);
+  res2 = ltc_readRegister(id, TEMPERATURE_LSB_REG, &adc_code[0]);
   usleep(1);
 
   *temperature = (uint16_t)((adc_code[1] << 8) | adc_code[0]);
 
-  return 0;
+  return (res1 & res2);
 }
 
 
@@ -252,12 +260,14 @@ bool ltc_capacity(dev_id id, uint16_t *cap) {
   uint8_t adc_code[2];
   uint16_t adc = 0;
 
-  ltc_readRegister(id, ACCUM_CHARGE_MSB_REG, &adc_code[1]);
+  bool res1, res2;
+
+  res1 = ltc_readRegister(id, ACCUM_CHARGE_MSB_REG, &adc_code[1]);
   usleep(1);
-  ltc_readRegister(id, ACCUM_CHARGE_LSB_REG, &adc_code[0]);
+  res2 = ltc_readRegister(id, ACCUM_CHARGE_LSB_REG, &adc_code[0]);
   usleep(1);
 
   *cap = ((adc_code[1] << 8) | adc_code[0] );
 
-  return 0;
+  return (res1 & res2);
 }
