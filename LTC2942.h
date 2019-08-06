@@ -52,16 +52,11 @@ http://www.linear.com/product/LTC2942#demoboards
 #ifndef LTC2942_H
 #define LTC2942_H
 
-#include <Energia.h>
-#include <DWire.h>
-
-/*! @name LTC2942 I2C Address
-@{ */
+#include "DWire.h"
 
 #define I2C_ADDRESS 			0x64
 #define I2C_ALERT_RESPONSE  	0x0C
 #define DEVICE_ID				0x00
-//! @}
 
 /*! @name Registers
 @{ */
@@ -150,10 +145,10 @@ public:
 	void reset_charge();
 	
 	// Retrieve and convert register value to measurements
-	unsigned char code_to_voltage(unsigned short &voltage);
+	unsigned char readVoltage(unsigned short &voltage);
 	unsigned char code_to_celcius_temperature(short &temperature);
-	unsigned char code_to_millicoulombs(unsigned long &coulomb_charge);
-	unsigned char code_to_microAh(unsigned long &mAh_charge);
+	unsigned char readCharge(unsigned long &coulomb_charge);
+	unsigned char readAvailableCapacity(unsigned long &mAh_charge);
 	
 	
 	// read and write from the register

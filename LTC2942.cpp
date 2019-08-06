@@ -45,9 +45,9 @@ unsigned char LTC2942::ping()
 	}
 }
 
-/**  Initialise the value of control register
+/**  Initialize the value of control register
  *   
- *   Control register is initialise to automatic mode, ALCC pin disable, and prescaler M depending on Q and R
+ *   Control register is initialize to automatic mode, ALCC pin disable, and prescaler M depending on Q and R
  *
  *   Parameters:
  *   unsigned short Q			   battery capacity in mAh
@@ -143,7 +143,9 @@ void LTC2942::reset_charge()
 
 
 
-/** Calculate the LTC2942 SENSE+ voltage
+/**
+ *
+ *  Read battery voltage in mV
  *
  *  Parameters:
  *  unsigned short &				voltage in mV
@@ -159,16 +161,15 @@ void LTC2942::reset_charge()
  *     floating point offset is acceptable as it is lower than the resolution of LTC2942 voltage measurement (78mV)
  *
  */
-unsigned char LTC2942::code_to_voltage(unsigned short &voltage)
+unsigned char LTC2942::readVoltage(unsigned short &voltage)
 {
-	unsigned short adc_code = -1;
-	unsigned char ret1, ret2;
+	unsigned short adc_code;
 	  
-	ret1 = readRegister(VOLTAGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
-	ret2 = readRegister(VOLTAGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
+	int ret1 = readRegister(VOLTAGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
+	int ret2 = readRegister(VOLTAGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
 
-	voltage = (adc_code *FULLSCALE_VOLTAGE) >> 16;			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
-	return(ret1 || ret2);
+	voltage = (unsigned short)(((int)adc_code * FULLSCALE_VOLTAGE) >> 16);			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
+	return (ret1 || ret2);
 }
 
 /** Calculate the LTC2942 temperature
@@ -199,10 +200,12 @@ unsigned char LTC2942::code_to_celcius_temperature(short &temperature)
   return(ret1 || ret2);
 }
 
-/** Calculate the LTC2942 charge in milliCoulombs
+/**
+ *
+ *  Get battery charge in milliCoulombs
  *
  *  Parameters:
- *  unsigned long &		  Coulomb charge in mC
+ *  unsigned long &		  Stored charge in mC
  *
  *	Returns
  * 	unsigned char         0 success
@@ -212,18 +215,20 @@ unsigned char LTC2942::code_to_celcius_temperature(short &temperature)
  *  Return is in unsigned long to prevent usage of float datatype as well as prevent overflow
  *
  */
-unsigned char LTC2942::code_to_millicoulombs(unsigned long &coulomb_charge)
+unsigned char LTC2942::readCharge(unsigned long &coulomb_charge)
 {
   unsigned char ret;
-  ret = code_to_microAh(coulomb_charge);	
-  coulomb_charge = coulomb_charge * 3.6;	//1microAh = 3.6 mC
+  ret = readAvailableCapacity(coulomb_charge);
+  coulomb_charge = (coulomb_charge * 36) / 10;	// 1microAh = 3.6 mC
   return ret;
 }
 
-/** Calculate the LTC2942 charge in microAh
+/**
+ *
+ *  Get the available capacity in microAh
  *
  *  Parameters:	
- *  unsigned long &		  Coulomb charge in microAh
+ *  unsigned long &		  Capacity in microAh
  *
  *	Returns
  * 	unsigned char         0 success
@@ -234,21 +239,18 @@ unsigned char LTC2942::code_to_millicoulombs(unsigned long &coulomb_charge)
  *  Loss of precision is < than LSB (0.085mAh)
  *     
  */
-unsigned char LTC2942::code_to_microAh(unsigned long &mAh_charge)
+unsigned char LTC2942::readAvailableCapacity(unsigned long &mAh_charge)
 {
-  unsigned short adc_code = -1;
-  unsigned char ret1, ret2;
+  unsigned short adc_code = 0;
+
+  int ret1 = readRegister(ACCUM_CHARGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
+  int ret2 = readRegister(ACCUM_CHARGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
   
-  ret1 = readRegister(ACCUM_CHARGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
-  ret2 = readRegister(ACCUM_CHARGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
+  //charge in microAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
+  mAh_charge = (unsigned long)((unsigned long)adc_code * CHARGE_lsb * M * 5)/(R_sense * 128) * 10;
   
-  mAh_charge = (unsigned long)(adc_code * CHARGE_lsb * M * 5)/(R_sense * 128) * 10;		//charge in microAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
-  return(ret1 || ret2);
+  return (ret1 || ret2);
 }
-
-
-
-
 
 /**  Returns the value of the selected internal register
  *
