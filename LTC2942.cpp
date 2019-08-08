@@ -161,7 +161,7 @@ void LTC2942::reset_charge()
  *     floating point offset is acceptable as it is lower than the resolution of LTC2942 voltage measurement (78mV)
  *
  */
-unsigned char LTC2942::readVoltage(unsigned short &voltage)
+unsigned char LTC2942::getVoltage(unsigned short &voltage)
 {
 	unsigned short adc_code;
 	  
@@ -188,7 +188,7 @@ unsigned char LTC2942::readVoltage(unsigned short &voltage)
  *     Unit in E-2 Celcius, not in 10^3 as it might cause overflow at high temperature
  *
  */
-unsigned char LTC2942::code_to_celcius_temperature(short &temperature)
+unsigned char LTC2942::getTemperature(short &temperature)
 {
   unsigned short adc_code = -1;
   unsigned char ret1, ret2;
@@ -215,10 +215,10 @@ unsigned char LTC2942::code_to_celcius_temperature(short &temperature)
  *  Return is in unsigned long to prevent usage of float datatype as well as prevent overflow
  *
  */
-unsigned char LTC2942::readCharge(unsigned long &coulomb_charge)
+unsigned char LTC2942::getCharge(unsigned long &coulomb_charge)
 {
   unsigned char ret;
-  ret = readAvailableCapacity(coulomb_charge);
+  ret = getAvailableCapacity(coulomb_charge);
   coulomb_charge = (coulomb_charge * 36) / 10;	// 1microAh = 3.6 mC
   return ret;
 }
@@ -239,7 +239,7 @@ unsigned char LTC2942::readCharge(unsigned long &coulomb_charge)
  *  Loss of precision is < than LSB (0.085mAh)
  *     
  */
-unsigned char LTC2942::readAvailableCapacity(unsigned long &mAh_charge)
+unsigned char LTC2942::getAvailableCapacity(unsigned long &mAh_charge)
 {
   unsigned short adc_code = 0;
 

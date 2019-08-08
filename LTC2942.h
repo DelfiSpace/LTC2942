@@ -145,10 +145,10 @@ public:
 	void reset_charge();
 	
 	// Retrieve and convert register value to measurements
-	unsigned char readVoltage(unsigned short &voltage);
-	unsigned char code_to_celcius_temperature(short &temperature);
-	unsigned char readCharge(unsigned long &coulomb_charge);
-	unsigned char readAvailableCapacity(unsigned long &mAh_charge);
+	unsigned char getVoltage(unsigned short &voltage);
+	unsigned char getTemperature(short &temperature);
+	unsigned char getCharge(unsigned long &coulomb_charge);
+	unsigned char getAvailableCapacity(unsigned long &mAh_charge);
 	
 	
 	// read and write from the register
