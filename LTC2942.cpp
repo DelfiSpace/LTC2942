@@ -168,7 +168,14 @@ unsigned char LTC2942::getVoltage(unsigned short &voltage)
 	int ret1 = readRegister(VOLTAGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
 	int ret2 = readRegister(VOLTAGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
 
-	voltage = (unsigned short)(((int)adc_code * FULLSCALE_VOLTAGE) >> 16);			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
+	if (ret1 || ret2)
+	{
+	    voltage = 0;
+	}
+	else
+	{
+	    voltage = (unsigned short)(((int)adc_code * FULLSCALE_VOLTAGE) >> 16);			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
+	}
 	return (ret1 || ret2);
 }
 
