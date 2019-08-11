@@ -182,7 +182,7 @@ unsigned char LTC2942::getVoltage(unsigned short &voltage)
 /** Calculate the LTC2942 temperature
  *
  *  Parameters:
- *  short &					Temperature in E-2 Celcius 
+ *  short &					Temperature in E-1 Celcius
  *
  *	Returns
  * 	unsigned char         0 success
@@ -195,15 +195,22 @@ unsigned char LTC2942::getVoltage(unsigned short &voltage)
  *     Unit in E-2 Celcius, not in 10^3 as it might cause overflow at high temperature
  *
  */
-unsigned char LTC2942::getTemperature(short &temperature)
+unsigned char LTC2942::getTemperature(signed short &temperature)
 {
-  unsigned short adc_code = -1;
+  unsigned short adc_code;
   unsigned char ret1, ret2;
   
   ret1 = readRegister(TEMPERATURE_MSB_REG, ((unsigned char*)&adc_code)[1]);
   ret2 = readRegister(TEMPERATURE_LSB_REG, ((unsigned char*)&adc_code)[0]);
   
-  temperature = short((adc_code *FULLSCALE_TEMPERATURE * 100) >> 16 ) - 27315; //Note: multiply by 100 to convert to 10^2 Celcius, to prevent using float datatype
+  if (ret1 || ret2)
+  {
+      temperature = SHRT_MAX;
+  }
+  else
+  {
+      temperature = ((signed short)((((unsigned int)adc_code) * FULLSCALE_TEMPERATURE * 10) >> 16 )) - 2731; //Note: multiply by 100 to convert to 10^2 Celcius, to prevent using float datatype
+  }
   return(ret1 || ret2);
 }
 
@@ -272,7 +279,7 @@ unsigned char LTC2942::getAvailableCapacity(unsigned long &mAh_charge)
  */
 unsigned char LTC2942::readRegister(unsigned char reg, unsigned char &output)
 {
-    output = -1;
+    output = 0xFF;
     wire.beginTransmission(address);
     wire.write(reg);
 

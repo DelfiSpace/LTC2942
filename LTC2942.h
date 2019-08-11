@@ -52,6 +52,7 @@ http://www.linear.com/product/LTC2942#demoboards
 #ifndef LTC2942_H
 #define LTC2942_H
 
+#include <limits.h>
 #include "DWire.h"
 
 #define I2C_ADDRESS 			0x64
@@ -146,7 +147,7 @@ public:
 	
 	// Retrieve and convert register value to measurements
 	unsigned char getVoltage(unsigned short &voltage);
-	unsigned char getTemperature(short &temperature);
+	unsigned char getTemperature(signed short &temperature);
 	unsigned char getCharge(unsigned long &coulomb_charge);
 	unsigned char getAvailableCapacity(unsigned long &mAh_charge);
 	
