@@ -1,9 +1,10 @@
-/* Code written by Chia Jiun Wei @ 14 Feb 2017
+/* Code written by Chia Jiun Wei and Stefano Speretta
  * <J.W.Chia@tudelft.nl>
+ * <S.Speretta@tudelft.nl>
  
  * LTC2942: a library to provide high level APIs to interface with the 
  * Linear Technology Gas Gauge. It is possible to use this library in 
- * Energia (the Arduino port for MSP microcontrollers) or in other 
+ * Energia (the Arduino port for MSP micro-controllers) or in other
  * toolchains.
  
  * This file is free software; you can redistribute it and/or modify
@@ -58,6 +59,9 @@ http://www.linear.com/product/LTC2942#demoboards
 #define I2C_ADDRESS 			0x64
 #define I2C_ALERT_RESPONSE  	0x0C
 #define DEVICE_ID				0x00
+
+#define SUCCESS                 0x00
+#define FAIL                    0x01
 
 /*! @name Registers
 @{ */
@@ -120,44 +124,45 @@ http://www.linear.com/product/LTC2942#demoboards
 #define CHARGE_lsb 						85			// LSB: 85 microAh
 #define VOLTAGE_lsb						0.0003662f
 #define TEMPERATURE_lsb					0.25f		/*CHECK*/
-#define FULLSCALE_VOLTAGE				6000		//LSB: 6000mV
-#define FULLSCALE_TEMPERATURE			600
+#define FULLSCALE_VOLTAGE				6000		// LSB: 6000mV
+#define FULLSCALE_TEMPERATURE			6000        // LSB: 0.1 degC
 
 //! @}
 
 class LTC2942
-
 {
 protected:
-	DWire &wire;
-    unsigned char address;
-	unsigned char M;		//prescaler
-	unsigned short R_sense;	//Sense resistor
-	
-public:
+	DWire &i2cBus;
 
-	LTC2942(DWire &i2c);
-	virtual ~LTC2942( ) {};
-	
-	unsigned char ping();
-	
-	// Configure the device
-	void init(unsigned short Q, unsigned short R, unsigned short I);
-	void reset_charge();
-	
-	// Retrieve and convert register value to measurements
-	unsigned char getVoltage(unsigned short &voltage);
-	unsigned char getTemperature(signed short &temperature);
-	unsigned char getCharge(unsigned long &coulomb_charge);
-	unsigned char getAvailableCapacity(unsigned long &mAh_charge);
-	
-	
-	// read and write from the register
-	unsigned char readRegister(unsigned char reg, unsigned char &output);
-	unsigned char writeRegister(unsigned char reg, unsigned char val);
+	unsigned char M;		     // prescaler
+    unsigned long Num;           // numerator
+    unsigned long Den;           // denominator
+    unsigned long Offset;        // offset
 	
 private:
+    // read and write from the register
+    unsigned char readRegister( unsigned char reg, unsigned char &output );
+    unsigned char writeRegister( unsigned char reg, unsigned char val );
 
+public:
+
+	LTC2942( DWire &i2c, unsigned short Q, unsigned short R );
+	virtual ~LTC2942( ) {};
+	
+	unsigned char ping( );
+	
+	// Configure the device
+	void init( );
+	
+	// Retrieve and convert register value to measurements
+	unsigned char getVoltage( unsigned short &voltage );
+	unsigned char getTemperature( signed short &temperature );
+	unsigned char getCharge( unsigned short &coulomb_charge );
+	unsigned char getAvailableCapacity( unsigned short &mAh_charge );
+	
+	// raw register values
+    unsigned char getRawCharge( unsigned short &val );
+    unsigned char setRawCharge( unsigned short val );
 };
 
 #endif  // LTC2942_H

@@ -1,9 +1,10 @@
-/* Code written by Chia Jiun Wei @ 14 Feb 2017
+/* Code written by Chia Jiun Wei and Stefano Speretta
  * <J.W.Chia@tudelft.nl>
+ * <S.Speretta@tudelft.nl>
  
  * LTC2942: a library to provide high level APIs to interface with the 
  * Linear Technology Gas Gauge. It is possible to use this library in 
- * Energia (the Arduino port for MSP microcontrollers) or in other 
+ * Energia (the Arduino port for MSP micro-controllers) or in other
  * toolchains.
  
  * This file is free software; you can redistribute it and/or modify
@@ -11,18 +12,34 @@
  * version 3, both as published by the Free Software Foundation.
   
  */
-
 #include "LTC2942.h"
 
 /**  LTC2942 class creator function
  *
  *   Parameters:
  *   DWire &i2c             I2C object
+ *   unsigned short Q       battery capacity in mAh
+ *   unsigned short R       Sense resistor value in mOhm
  *
  */
-LTC2942::LTC2942(DWire &i2c): wire(i2c)
+LTC2942::LTC2942(DWire &i2c, unsigned short Q, unsigned short R ):
+    i2cBus(i2c)
 {
-    address = I2C_ADDRESS;
+    unsigned int k, a;
+    M = 7;
+    for(k = 128; k > 1; k = k / 2)
+    {
+         a = 278524 * k / R / 128;
+        if (a < (2 * Q))
+        {
+            break;
+        }
+        M--;
+    }
+
+    Num = 87 * 50 * k;
+    Den = 128 * R;
+    Offset = (64 * Num / Den) - Q;
 }
 
 /**  Verify if LTC2942 is present
@@ -35,9 +52,10 @@ LTC2942::LTC2942(DWire &i2c): wire(i2c)
 unsigned char LTC2942::ping()
 {	
 	unsigned char ret;
-	if (readRegister(STATUS_REG, ret) == 0)
+	if (readRegister(STATUS_REG, ret) == SUCCESS)
 	{
-		return  (ret & 0xC0) == DEVICE_ID;	//Only last 2 bits give device identification, bitmask first 6 bits
+	    //Only last 2 bits give device identification, bitmask first 6 bits
+		return  (ret & 0xC0) == DEVICE_ID;
 	}
 	else
 	{
@@ -47,101 +65,102 @@ unsigned char LTC2942::ping()
 
 /**  Initialize the value of control register
  *   
- *   Control register is initialize to automatic mode, ALCC pin disable, and prescaler M depending on Q and R
- *
- *   Parameters:
- *   unsigned short Q			   battery capacity in mAh
- *   unsigned short	R			   Sense resistor value in mOhm
- *   unsigned short I			   Max current of the system in mA
+ *   Control register is initialize to automatic mode, ALCC pin set to charge
+ *   completion, and prescaler M depending on Q and R
  *
  */
-void LTC2942::init(unsigned short Q, unsigned short R, unsigned short I)
+void LTC2942::init( )
 {
-	double temp;
-	unsigned char i = 0;
-	
-	R_sense = R;
-	
-	if (Q < I / 10)		//Page 11 of LTC2942 data sheet
-	{
-	
-	temp = double(Q * R_sense /(50 * 0.085 * 512)); //divide by 2^9 (512), reduce computational load
-	
-	while ( temp > 1.0)
-	{
-		temp /= 2.0;
-		i++;
-	}
-	
-	if (i >= 7)
-	{
-		i = 7;
-	}
-	
-	switch(i)
+    switch(M)
 	{
 		case 0: 
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_1 | DISABLE_ALCC_PIN));
-		M = 1;
-		break;
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_1 | CHARGE_COMPLETE_MODE));
+		    break;
 		
 		case 1: 
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_2 | DISABLE_ALCC_PIN));
-		M = 2;
-		break;
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_2 | CHARGE_COMPLETE_MODE));
+		    break;
 		
 		case 2: 
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_4 | DISABLE_ALCC_PIN));
-		M = 4;
-		break;
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_4 | CHARGE_COMPLETE_MODE));
+		    break;
 		
 		case 3: 
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_8 | DISABLE_ALCC_PIN));
-		M = 8;
-		break;
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_8 | CHARGE_COMPLETE_MODE));
+		    break;
 		
 		case 4: 
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_16 | DISABLE_ALCC_PIN));
-		M = 16;
-		break;
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_16 | CHARGE_COMPLETE_MODE));
+		    break;
 		
 		case 5: 
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_32 | DISABLE_ALCC_PIN));
-		M = 32;
-		break;
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_32 | CHARGE_COMPLETE_MODE));
+		    break;
 		
 		case 6: 
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_64 | DISABLE_ALCC_PIN));
-		M = 64;
-		break;
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_64 | CHARGE_COMPLETE_MODE));
+		    break;
 		
 		case 7: 
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_128 | DISABLE_ALCC_PIN));
-		M = 128;
-		break;
-	}
-	}
-	else 
-	{
-		writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_128 | DISABLE_ALCC_PIN));	//default M = 128
-		M = 128;
+		default:
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_128 | CHARGE_COMPLETE_MODE));
+		    break;
 	}
 }
 
-/** Reset the accumulated charge count to zero
+/**
+ *
+ *  Set raw battery charge
+ *
+ *  Parameters:
+ *  unsigned short                  raw battery charge
+ *
+ *  Returns
+ *  unsigned char         0 success
+ *                        1 fail
+ *
  */
-void LTC2942::reset_charge()
+unsigned char LTC2942::setRawCharge(unsigned short val)
 {
 	unsigned char reg_save;	//value of control register
+	unsigned char retCode;
+
+	retCode = readRegister(CONTROL_REG, reg_save);
+	retCode |= writeRegister(CONTROL_REG, (reg_save | SHUTDOWN_MODE));	//shutdown to write into accumulated charge register
+	retCode |= writeRegister(ACCUM_CHARGE_MSB_REG, ((unsigned char*)&val)[1]);
+	retCode |= writeRegister(ACCUM_CHARGE_LSB_REG, ((unsigned char*)&val)[0]);
+	retCode |= writeRegister(CONTROL_REG, reg_save);	//Power back on
 	
-	readRegister(CONTROL_REG, reg_save);
-	writeRegister(CONTROL_REG, (reg_save | SHUTDOWN_MODE));	//shutdown to write into accumulated charge register
-	writeRegister(ACCUM_CHARGE_MSB_REG, 0x00);
-	writeRegister(ACCUM_CHARGE_LSB_REG, 0x00);
-	writeRegister(CONTROL_REG, reg_save);	//Power back on
+    return retCode;
 }
 
+/**
+ *
+ *  Read raw battery charge
+ *
+ *  Parameters:
+ *  unsigned short &                raw battery charge
+ *                                  SHRT_MAX in case of failure
+ *
+ *  Returns
+ *  unsigned char         0 success
+ *                        1 fail
+ *
+ */
+unsigned char LTC2942::getRawCharge(unsigned short &val)
+{
+    unsigned char retCode;
 
+    retCode = readRegister(ACCUM_CHARGE_MSB_REG, ((unsigned char*)&val)[1]);
+    retCode |= readRegister(ACCUM_CHARGE_LSB_REG, ((unsigned char*)&val)[0]);
+
+    if (retCode == FAIL)
+    {
+        val = USHRT_MAX;
+    }
+
+    return (retCode);
+}
 
 /**
  *
@@ -149,6 +168,7 @@ void LTC2942::reset_charge()
  *
  *  Parameters:
  *  unsigned short &				voltage in mV
+ *                                  USHRT_MAX in case of failure
  *
  *	Returns
  * 	unsigned char         0 success
@@ -164,25 +184,28 @@ void LTC2942::reset_charge()
 unsigned char LTC2942::getVoltage(unsigned short &voltage)
 {
 	unsigned short adc_code;
-	  
-	int ret1 = readRegister(VOLTAGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
-	int ret2 = readRegister(VOLTAGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
+    unsigned char retCode;
 
-	if (ret1 || ret2)
+    retCode = readRegister(VOLTAGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
+    retCode |= readRegister(VOLTAGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
+
+	if (retCode == FAIL)
 	{
-	    voltage = 0;
+	    voltage = USHRT_MAX;
 	}
 	else
 	{
-	    voltage = (unsigned short)(((int)adc_code * FULLSCALE_VOLTAGE) >> 16);			//Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
+	    voltage = (unsigned short)(((int)adc_code * FULLSCALE_VOLTAGE) >> 16);
+	    //Note: FULLSCALE_VOLTAGE is in mV, to prevent using float datatype
 	}
-	return (ret1 || ret2);
+	return (retCode);
 }
 
 /** Calculate the LTC2942 temperature
  *
  *  Parameters:
- *  short &					Temperature in E-1 Celcius
+ *  signed short &					Temperature in units of 0.1 Celcius
+ *                                  SHRT_MAX in case of failure
  *
  *	Returns
  * 	unsigned char         0 success
@@ -192,106 +215,88 @@ unsigned char LTC2942::getVoltage(unsigned short &voltage)
  *  1. Datasheet conversion formula divide by 65535, in this library we divide by 65536 (>> 16) to reduce computational load 
  *     this is acceptable as the difference is much lower than the resolution of LTC2942 temperature measurement (3 Celcius)
  *  2. Return is in short to prevent usage of float datatype, floating point offset is acceptable as it is lower than the resolution of LTC2942 voltage measurement (3 Celcius).
- *     Unit in E-2 Celcius, not in 10^3 as it might cause overflow at high temperature
+ *     Unit of 0.1 Celcius
  *
  */
 unsigned char LTC2942::getTemperature(signed short &temperature)
 {
   unsigned short adc_code;
-  unsigned char ret1, ret2;
+  unsigned char retCode;
   
-  ret1 = readRegister(TEMPERATURE_MSB_REG, ((unsigned char*)&adc_code)[1]);
-  ret2 = readRegister(TEMPERATURE_LSB_REG, ((unsigned char*)&adc_code)[0]);
+  retCode = readRegister(TEMPERATURE_MSB_REG, ((unsigned char*)&adc_code)[1]);
+  retCode |= readRegister(TEMPERATURE_LSB_REG, ((unsigned char*)&adc_code)[0]);
   
-  if (ret1 || ret2)
+  if (retCode == FAIL)
   {
       temperature = SHRT_MAX;
   }
   else
   {
-      temperature = ((signed short)((((unsigned int)adc_code) * FULLSCALE_TEMPERATURE * 10) >> 16 )) - 2731; //Note: multiply by 100 to convert to 10^2 Celcius, to prevent using float datatype
+      temperature = ((signed short)((((unsigned int)adc_code) * FULLSCALE_TEMPERATURE) >> 16 )) - 2731;
+      //Note: multiply by 100 to convert to 10^2 Celcius, to prevent using float datatype
   }
-  return(ret1 || ret2);
+  return(retCode);
 }
 
 /**
  *
- *  Get battery charge in milliCoulombs
- *
- *  Parameters:
- *  unsigned long &		  Stored charge in mC
- *
- *	Returns
- * 	unsigned char         0 success
- *                        1 fail
- *
- *  Note:
- *  Return is in unsigned long to prevent usage of float datatype as well as prevent overflow
- *
- */
-unsigned char LTC2942::getCharge(unsigned long &coulomb_charge)
-{
-  unsigned char ret;
-  ret = getAvailableCapacity(coulomb_charge);
-  coulomb_charge = (coulomb_charge * 36) / 10;	// 1microAh = 3.6 mC
-  return ret;
-}
-
-/**
- *
- *  Get the available capacity in microAh
+ *  Get the available capacity in mAh
  *
  *  Parameters:	
- *  unsigned long &		  Capacity in microAh
+ *  unsigned short &		        Capacity in mAh
+ *                                  USHRT_MAX in case of failure
  *
  *	Returns
  * 	unsigned char         0 success
  *                        1 fail
- *
- *  Note:
- *  Return is in unsigned long to prevent usage of float datatype 
- *  Loss of precision is < than LSB (0.085mAh)
  *     
  */
-unsigned char LTC2942::getAvailableCapacity(unsigned long &mAh_charge)
+unsigned char LTC2942::getAvailableCapacity(unsigned short &mAh_charge)
 {
   unsigned short adc_code = 0;
+  unsigned char retCode;
 
-  int ret1 = readRegister(ACCUM_CHARGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
-  int ret2 = readRegister(ACCUM_CHARGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
+  retCode = readRegister(ACCUM_CHARGE_MSB_REG, ((unsigned char*)&adc_code)[1]);
+  retCode |= readRegister(ACCUM_CHARGE_LSB_REG, ((unsigned char*)&adc_code)[0]);
   
-  //charge in microAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
-  mAh_charge = (unsigned long)((unsigned long)adc_code * CHARGE_lsb * M * 5)/(R_sense * 128) * 10;
-  
-  return (ret1 || ret2);
+  if (retCode == FAIL)
+  {
+      mAh_charge = USHRT_MAX;
+  }
+  else
+  {
+      //charge in mAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
+      mAh_charge = (unsigned short)(((unsigned long)adc_code * Num / Den) - Offset);
+  }
+  return (retCode);
 }
 
 /**  Returns the value of the selected internal register
  *
  *   Parameters:
- *   unsigned char reg     register number
- *   unsigned char &       register value
+ *   unsigned char reg              register number
+ *   unsigned char &                register value
  *
  *   Returns:
- *   unsigned char         0 success
- *                         1 fail
+ *   unsigned char        0 success
+ *                        1 fail
  *
  */
 unsigned char LTC2942::readRegister(unsigned char reg, unsigned char &output)
 {
     output = 0xFF;
-    wire.beginTransmission(address);
-    wire.write(reg);
+    i2cBus.beginTransmission(I2C_ADDRESS);
+    i2cBus.write(reg);
 
-    unsigned char res = wire.requestFrom(address, 1);
-    if (res == 1)
+    unsigned char res = i2cBus.requestFrom(I2C_ADDRESS, 1);
+    if (res == SUCCESS)
     {
-		output = wire.read();
-		return 0;
+		output = i2cBus.read();
+		return SUCCESS;
     }
 	else
 	{
-		return 1;
+		return FAIL;
 	}
 }
 
@@ -299,17 +304,17 @@ unsigned char LTC2942::readRegister(unsigned char reg, unsigned char &output)
 /**  Sets the value (1 byte) of the selected internal register
  *   
  *   Parameters:
- *   unsigned char reg     register number
- *   unsigned char val     register value
+ *   unsigned char reg              register number
+ *   unsigned char val              register value
  *
  *   Returns:
- *   unsigned char         0 success
- *                         1 fail
+ *   unsigned char        0 success
+ *                        1 fail
  */
 unsigned char LTC2942::writeRegister(unsigned char reg, unsigned char val)
 {
-    wire.beginTransmission(address);
-    wire.write(reg);
-    wire.write(val & 0xFF);      
-    return wire.endTransmission();
+    i2cBus.beginTransmission(I2C_ADDRESS);
+    i2cBus.write(reg);
+    i2cBus.write(val & 0xFF);      
+    return i2cBus.endTransmission();
 }
