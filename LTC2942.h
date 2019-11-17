@@ -4,8 +4,8 @@
  
  * LTC2942: a library to provide high level APIs to interface with the 
  * Linear Technology Gas Gauge. It is possible to use this library in 
- * Energia (the Arduino port for MSP micro-controllers) or in other
- * toolchains.
+ * Energia (the Arduino port for MSP micro-controllers) or in Code
+ * Composer Studio.
  
  * This file is free software; you can redistribute it and/or modify
  * it under the terms of the GNU Lesser General Public License 
