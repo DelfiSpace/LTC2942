@@ -288,8 +288,10 @@ unsigned char LTC2942::readRegister(unsigned char reg, unsigned char &output)
     i2cBus.beginTransmission(I2C_ADDRESS);
     i2cBus.write(reg);
 
+
+    //to-do: check if readability of this part is sufficient
     unsigned char res = i2cBus.requestFrom(I2C_ADDRESS, 1);
-    if (res == SUCCESS)
+    if (res == 1)
     {
 		output = i2cBus.read();
 		return SUCCESS;
