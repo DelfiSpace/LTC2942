@@ -74,36 +74,36 @@ void LTC2942::init( )
     switch(M)
 	{
 		case 0: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_1 | CHARGE_COMPLETE_MODE));
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_1 | DISABLE_ALCC_PIN));
 		    break;
 		
 		case 1: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_2 | CHARGE_COMPLETE_MODE));
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_2 | DISABLE_ALCC_PIN));
 		    break;
 		
 		case 2: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_4 | CHARGE_COMPLETE_MODE));
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_4 | DISABLE_ALCC_PIN));
 		    break;
 		
 		case 3: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_8 | CHARGE_COMPLETE_MODE));
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_8 | DISABLE_ALCC_PIN));
 		    break;
 		
 		case 4: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_16 | CHARGE_COMPLETE_MODE));
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_16 | DISABLE_ALCC_PIN));
 		    break;
 		
 		case 5: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_32 | CHARGE_COMPLETE_MODE));
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_32 | DISABLE_ALCC_PIN));
 		    break;
 		
 		case 6: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_64 | CHARGE_COMPLETE_MODE));
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_64 | DISABLE_ALCC_PIN));
 		    break;
 		
 		case 7: 
 		default:
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_128 | CHARGE_COMPLETE_MODE));
+		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_128 | DISABLE_ALCC_PIN));
 		    break;
 	}
 }
