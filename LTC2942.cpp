@@ -263,11 +263,11 @@ unsigned char LTC2942::getAvailableCapacity(unsigned short &mAh_charge)
   {
       mAh_charge = USHRT_MAX;
   }
-  else
-  {
+  //else
+  //{
       //charge in mAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
-      mAh_charge = (unsigned short)(((unsigned long)adc_code * Num / Den));//) - Offset);
-  }
+  //    mAh_charge = (unsigned short)(((unsigned long)adc_code * Num / Den));//) - Offset);
+  //}
   return (retCode);
 }
 
