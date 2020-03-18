@@ -22,14 +22,16 @@
  *   unsigned short R       Sense resistor value in mOhm
  *
  */
-LTC2942::LTC2942(DWire &i2c, unsigned short Q, unsigned short R ):
+LTC2942::LTC2942(DWire &i2c, const unsigned short Q, const unsigned short R ):
     i2cBus(i2c)
 {
+    //TODO: remove the loop in initialization code, replace it with
+    // something else to avoid getting stuck in the constructor
     unsigned int k, a;
     M = 7;
     for(k = 128; k > 1; k = k / 2)
     {
-         a = 278524 * k / R / 128;
+        a = 278524 * k / R / 128;
         if (a < (2 * Q))
         {
             break;
@@ -37,9 +39,12 @@ LTC2942::LTC2942(DWire &i2c, unsigned short Q, unsigned short R ):
         M--;
     }
 
-    Num = 87 * 50 * k;
-    Den = 128 * R;
-    Offset = (64 * Num / Den) - Q;
+    // multiplying time 4 numerator and denominator to achieve integer operations
+    // Num = 0.085 * 50 * 4 * k
+    // Den = 4 * 128 * R
+    Num = 17 * k;
+    Den = 4 * 128 * R;
+    Offset = (65535 * Num / Den) - Q;
 }
 
 /**  Verify if LTC2942 is present
@@ -71,41 +76,46 @@ unsigned char LTC2942::ping()
  */
 void LTC2942::init( )
 {
+    // ADC is acquiring samples autonomously
+    // use the CC pin to flag charge completion (done by the battery protection circuit)
+    unsigned char configuration = AUTOMATIC_MODE | CHARGE_COMPLETE_MODE;
+
     switch(M)
 	{
 		case 0: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_1 | DISABLE_ALCC_PIN));
+		    configuration |= PRESCALAR_M_1;
 		    break;
 		
 		case 1: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_2 | DISABLE_ALCC_PIN));
+		    configuration |= PRESCALAR_M_2;
 		    break;
 		
 		case 2: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_4 | DISABLE_ALCC_PIN));
+		    configuration |= PRESCALAR_M_4;
 		    break;
 		
 		case 3: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_8 | DISABLE_ALCC_PIN));
+		    configuration |= PRESCALAR_M_8;
 		    break;
 		
 		case 4: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_16 | DISABLE_ALCC_PIN));
+		    configuration |= PRESCALAR_M_16;
 		    break;
 		
 		case 5: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_32 | DISABLE_ALCC_PIN));
+		    configuration |= PRESCALAR_M_32;
 		    break;
 		
 		case 6: 
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_64 | DISABLE_ALCC_PIN));
+		    configuration |= PRESCALAR_M_64;
 		    break;
 		
 		case 7: 
 		default:
-		    writeRegister(CONTROL_REG, (AUTOMATIC_MODE | PRESCALAR_M_128 | DISABLE_ALCC_PIN));
+		    configuration |= PRESCALAR_M_128;
 		    break;
 	}
+    writeRegister( CONTROL_REG, configuration );
 }
 
 /**
@@ -265,8 +275,9 @@ unsigned char LTC2942::getAvailableCapacity(unsigned short &mAh_charge)
   }
   else
   {
-      //charge in mAh, multiplier of 50 is split to 5 and 10 to prevent unsigned long overflow
-      mAh_charge = (unsigned short)(((unsigned long)adc_code * Num / Den));//) - Offset);
+      // charge in mAh: operation is split with numerator, denominator and offset to
+      // allow for integer operations
+      mAh_charge = (unsigned short)(((unsigned long)adc_code * Num / Den) - Offset);
   }
   return (retCode);
 }
