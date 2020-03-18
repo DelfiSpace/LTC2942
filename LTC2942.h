@@ -146,7 +146,7 @@ private:
 
 public:
 
-	LTC2942( DWire &i2c, unsigned short Q, unsigned short R );
+	LTC2942( DWire &i2c, const unsigned short Q, const unsigned short R );
 	virtual ~LTC2942( ) {};
 	
 	unsigned char ping( );
