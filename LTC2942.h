@@ -55,6 +55,7 @@ http://www.linear.com/product/LTC2942#demoboards
 
 #include <limits.h>
 #include "DWire.h"
+#include "DSerial.h"
 
 #define I2C_ADDRESS 			0x64
 #define I2C_ALERT_RESPONSE  	0x0C
@@ -134,7 +135,7 @@ class LTC2942
 protected:
 	DWire &i2cBus;
 
-	unsigned char M;		     // prescaler
+	unsigned char K;		     // prescaler
     unsigned long Num;           // numerator
     unsigned long Den;           // denominator
     unsigned long Offset;        // offset
@@ -160,7 +161,7 @@ public:
 	unsigned char getCharge( unsigned short &coulomb_charge );
 	unsigned char getAvailableCapacity( unsigned short &mAh_charge );
 	
-	// raw register values
+	// raw charge values
     unsigned char getRawCharge( unsigned short &val );
     unsigned char setRawCharge( unsigned short val );
 };
