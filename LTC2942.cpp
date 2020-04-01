@@ -13,7 +13,6 @@
   
  */
 #include "LTC2942.h"
-extern DSerial serial;
 
 /**  LTC2942 class creator function
  *
