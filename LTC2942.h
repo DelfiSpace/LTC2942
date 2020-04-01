@@ -55,7 +55,6 @@ http://www.linear.com/product/LTC2942#demoboards
 
 #include <limits.h>
 #include "DWire.h"
-#include "DSerial.h"
 
 #define I2C_ADDRESS 			0x64
 #define I2C_ALERT_RESPONSE  	0x0C
